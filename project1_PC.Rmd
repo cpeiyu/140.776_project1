@@ -56,7 +56,15 @@ Pick on the one that you think looks the best.
 Explain what the difference is when you changes the number of bins and explain why you picked the one you did. 
 
 ```{r message=FALSE}
-plot(pressure)
+hist(chocolate$rating, main = "#bins=default")
+hist(chocolate$rating, breaks=10, main = "#bins=10")
+hist(chocolate$rating, breaks=15, main = "#bins=15")
+hist(chocolate$rating, breaks=20, main = "#bins =20")
+hist(chocolate$rating, breaks=25, main = "#bins =25")
+
 ```
 
 2. Consider the countries where the beans originated from. How many reviews come from each country of bean origin?
+
+
+
