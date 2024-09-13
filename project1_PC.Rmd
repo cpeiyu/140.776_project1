@@ -71,8 +71,8 @@ hist(chocolate$rating, breaks=25, main = "#bins =25")
 2. Consider the countries where the beans originated from. How many reviews come from each country of bean origin?
 
 ```{r}
-beans <- filter(chocolate, company_location == country_of_bean_origin)
-count(group_by(beans,country_of_bean_origin))
+beans <- dplyr::filter(chocolate, company_location == country_of_bean_origin)
+count(dplyr::group_by(beans,country_of_bean_origin))
 ```
  
  
@@ -88,10 +88,12 @@ count(group_by(beans,country_of_bean_origin))
  
 
 ```{r}
-ecuador <- chocolate %>% group_by(country_of_bean_origin)%>% filter(country_of_bean_origin == "Ecuador")
+ecuador <- chocolate %>% 
+  dplyr::group_by(country_of_bean_origin)%>% 
+  dplyr::filter(country_of_bean_origin == "Ecuador")
 
 summary <- ecuador %>%
-  summarise (
+  dplyr::summarise (
     mean = mean(rating),
     sd = sd(rating),
     total = n()
@@ -106,8 +108,8 @@ print(summary)
 ```{r}
 
 maxecuador <- ecuador %>% 
-  group_by(company_location)%>%
-  summarise(mean= mean(rating)) %>%
+  dplyr::group_by(company_location)%>%
+  dplyr::summarise(mean= mean(rating)) %>%
   arrange(desc(mean))%>%
   slice(1)
 print(maxecuador)
@@ -118,8 +120,8 @@ print(maxecuador)
 
 
 ```{r}
-high3 <- chocolate %>% group_by(country_of_bean_origin) %>%
-  summarise(mean=mean(rating))%>%
+high3 <- chocolate %>% dplyr::group_by(country_of_bean_origin) %>%
+  dplyr::summarise(mean=mean(rating))%>%
   arrange(desc(mean))%>%
   slice(1:3)
 print(high3)
@@ -130,8 +132,8 @@ print(high3)
 
 ```{r}
 high3_10 <- chocolate %>% group_by(country_of_bean_origin) %>%
-  filter(n() >=10)%>%
-  summarise(mean=mean(rating))%>%
+  dplyr::filter(n() >=10)%>%
+  dplyr::summarise(mean=mean(rating))%>%
   arrange(desc(mean))%>%
   slice(1:3)
 
@@ -161,12 +163,12 @@ library(lubridate)
 
 #a. identify countries have more than 50 reviews.
 country50 <- chocolate %>%
-  group_by(country_of_bean_origin) %>%
-  filter(n() >= 50)
+  dplyr::group_by(country_of_bean_origin) %>%
+  dplyr::filter(n() >= 50)
 #b. create new variable- 4 groups: (i) <60%, (ii) >=60 to <70%, (iii) >=70 to <90%, and (iii) >=90%  
 country50$cocoa_num <- as.numeric(substr(country50$cocoa_percent, 1, nchar(country50$cocoa_percent)-1))
 
-country50 <- country50 %>% mutate(percgroup = case_when(
+country50 <- country50 %>% dplyr::mutate(percgroup = case_when(
         cocoa_num < 60~ 1,
         cocoa_num >= 60 & cocoa_num <70 ~ 2,
         cocoa_num >= 70 & cocoa_num <90 ~ 3,
@@ -175,15 +177,129 @@ country50 <- country50 %>% mutate(percgroup = case_when(
 
  ggplot(country50 , aes(x = as.factor (percgroup), y = rating)) +
   geom_boxplot() +
-  facet_wrap(~ country_of_bean_origin) +               # Facet the plot by 'country'
-  labs(x = "Cocoa Percentage Group",    # Label for x-axis
-       y = "Rating",                    # Label for y-axis
-       title = "Ratings by Cocoa Percentage Group, Faceted by Country") +
-  theme_minimal()   
+  facet_wrap(~ country_of_bean_origin) + 
+  labs(x = "Cocoa Percentage Group",
+       y = "Rating",      
+       title = "Ratings by Cocoa Percentage Group, Faceted by Country") 
 
 ```
 
 
 
 
+## Part 2: Joint dataset together
+
+
+Tasks
+
+
+1. Use this dataset it to create a new column called continent in our chocolate dataset1 that contains the continent name for each review where the country of bean origin is.
+
+
+2. Only keep reviews that have reviews from countries of bean origin with at least 10 reviews.
+
+
+3. Also, remove the country of bean origin named "Blend".
+
+
+4. Make a set of violin plots with ratings on the y-axis and continents on the x-axis.
+
+
+```{r}
+library(gapminder)
+view(gapminder)
+gapminder1 <- gapminder %>% 
+  dplyr::group_by(country)%>% 
+  distinct(country, continent) 
+
+newchocol <- chocolate %>% 
+  left_join(gapminder1, by = c("country_of_bean_origin" = "country")) %>%
+  dplyr::group_by(country_of_bean_origin) %>%
+  dplyr::filter(n() >= 10 &country_of_bean_origin != "Blend")
+
+unmatch <- newchocol%>%
+ dplyr:: filter(is.na(continent))%>%
+  dplyr::group_by(country_of_bean_origin)%>%
+  distinct(country_of_bean_origin,continent)
+unmatch
+
+
+ggplot(newchocol, aes(x = continent, y = rating)) +
+  geom_violin(trim = FALSE) + 
+  labs(x = "Continent", 
+       y = "Rating",
+       title = "Ratings by Continent")
+
+
+
+```
+
+
+
+## Part 3 Convert wide data into long data
+
+  We are going to create a set of features for us to plot over time. Use the functions in dplyr and tidyr to perform the following steps to the chocolate dataset:
+
+  1. Create a new set of columns titled beans, sugar, cocoa_butter, vanilla, letchin, and salt that contain a 1 or 0 representing whether or not that review for the chocolate bar contained that ingredient (1) or not (0).
+  
+  
+  2. Create a new set of columns titled char_cocoa, char_sweet, char_nutty, char_creamy, char_roasty, char_earthy that contain a 1 or 0 representing whether or not that the most memorable characteristic for the chocolate bar had that word (1) or not (0). 
+  
+     For example, if the word “sweet” appears in the most_memorable_characteristics, then record a 1, otherwise a 0 for that review in the char_sweet column (Hint: check out str_detect() from the stringr package).
+  
+  
+  3. For each year (i.e. review_date), calculate the mean value in each new column you created across all reviews for that year. (Hint: If all has gone well thus far, you should have a dataset with 16 rows and 13 columns).
+  
+  
+  4. Convert this wide dataset into a long dataset with a new feature and mean_score column.
+
+
+```{r}
+library(stringr)
+ chocolate_new <- chocolate %>%
+  replace_na(list(ingredients = "")) %>%
+  mutate(
+    beans = ifelse(str_detect(ingredients, "B"), 1, 0),
+    sugar = ifelse(str_detect(ingredients, "\\bS\\b") & !str_detect(ingredients, "S\\*"), 1, 0),     
+    cocoa_butter = ifelse(str_detect(ingredients, "C"), 1, 0),
+    vanilla = ifelse(str_detect(ingredients, "V"), 1, 0),
+    lecithin = ifelse(str_detect(ingredients, "L"), 1, 0), 
+    salt = ifelse(str_detect(ingredients, "Sa"), 1, 0)
+  )
+
+chocolate_new<- chocolate_new %>%
+  mutate(
+    char_cocoa = ifelse(str_detect(most_memorable_characteristics, "cocoa"), 1, 0),   # Cocoa
+    char_sweet = ifelse(str_detect(most_memorable_characteristics, "sweet"), 1, 0),   # Sweet
+    char_nutty = ifelse(str_detect(most_memorable_characteristics, "nutty"), 1, 0),   # Nutty
+    char_creamy = ifelse(str_detect(most_memorable_characteristics, "creamy"), 1, 0), # Creamy
+    char_roasty = ifelse(str_detect(most_memorable_characteristics, "roasty"), 1, 0), # Roasty
+    char_earthy = ifelse(str_detect(most_memorable_characteristics, "earthy"), 1, 0)  # Earthy
+  ) 
+ 
+summary_new <- chocolate_new %>%dplyr::group_by(review_date)%>%
+  summarise(
+    mean_beans = mean(beans, na.rm = TRUE), 
+    mean_sugar = mean(sugar, na.rm = TRUE),
+    mean_cocoa_butter = mean(cocoa_butter, na.rm = TRUE), 
+    mean_vanilla = mean(vanilla, na.rm = TRUE),  
+    mean_lecithin = mean(lecithin, na.rm = TRUE), 
+    mean_salt = mean(salt, na.rm = TRUE) ,
+    mean_char_cocoa = mean(char_cocoa, na.rm = TRUE),
+    mean_char_sweet = mean(char_sweet, na.rm = TRUE),
+    mean_char_nutty = mean(char_nutty, na.rm = TRUE),
+    mean_char_creamy = mean(char_creamy, na.rm = TRUE),
+    mean_char_roasty = mean(char_roasty, na.rm = TRUE),
+    mean_char_earthy = mean(char_earthy, na.rm = TRUE)
+  )
+
+summary_long<- summary_new %>%
+  pivot_longer(
+    cols = starts_with("mean_"), 
+    names_to = "feature_char",
+    values_to = "mean_score" 
+  )
+
+print(summary_long)
+```
 
