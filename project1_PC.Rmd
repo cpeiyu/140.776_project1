@@ -303,3 +303,52 @@ summary_long<- summary_new %>%
 print(summary_long)
 ```
 
+
+
+## PART 4
+
+
+```{r}
+ggplot(summary_long, aes(x = review_date, y = mean_score)) +
+  geom_point(color = "blue") +                             # Observed points
+  geom_smooth(method = "loess", se = FALSE, color = "red") + # Smoothed non-linear trend line
+  facet_wrap(~ feature_char, scales = "free_y") +               # One plot for each feature
+  labs(
+    title = "Mean Scores for Chocolate Features",            # Overall title
+    x = "Year",                                             
+    y = "Mean Score"
+  )
+```
+
+
+
+
+## PART 5
+
+
+```{r}
+
+```
+
+
+
+
+## PART 6
+
+
+```{r}
+chocolate %>%
+    ggplot(aes(
+        x = as.factor(review_date),
+        y = rating,
+        fill = review_date
+    )) +
+    geom_violin()
+```
+
+
+
+
+
+
+
