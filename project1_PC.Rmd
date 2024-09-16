@@ -51,12 +51,18 @@ glimpse(chocolate)
 ```
 
 
+
+
 ## Part 1: Explore data
 
 
 1. Make a histogram of the rating scores to visualize the overall distribution scores. 
-Change the number of bins from default to 10, 15, 20, and 25. 
-Pick on the one that you think looks the best.Explain what the difference is when you changes the number of bins and explain why you picked the one you did. 
+    Change the number of bins from default to 10, 15, 20, and 25. 
+    Pick on the one that you think looks the best.Explain what the difference is when you changes the number of bins and explain why you picked the one you did. 
+
+    Solution: In this question, I would like to use 15 bins to demonstrate the distribution of overall rating scores. With 15 bins, the graph looks smoother. When using 20 or 25 bins, there are too many gaps, which makes the graph looks more discrete and makes it harder to observe the distribution pattern.
+
+
 
 
 ```{r message=FALSE}
@@ -67,6 +73,8 @@ hist(chocolate$rating, breaks=20, main = "#bins =20")
 hist(chocolate$rating, breaks=25, main = "#bins =25")
 
 ```
+
+   
 
 2. Consider the countries where the beans originated from. How many reviews come from each country of bean origin?
 
@@ -119,6 +127,9 @@ print(maxecuador)
 5. Calculate the average rating across all country of origins for beans. Which top 3 countries (for bean origin) have the highest ratings on average?
 
 
+    Solution: the top three countries are Tobago, China, and Sao Tome & Principe. 
+    
+
 ```{r}
 high3 <- chocolate %>% dplyr::group_by(country_of_bean_origin) %>%
   dplyr::summarise(mean=mean(rating))%>%
@@ -130,6 +141,11 @@ print(high3)
 
 6. Following up on the previous problem, now remove any countries of bean origins that have less than 10 chocolate bar reviews. Now, which top 3 countries have the highest ratings on average?
 
+
+    Solution: The top three countries are Solomon Islands, Congo, and Cuba.
+    
+    
+
 ```{r}
 high3_10 <- chocolate %>% group_by(country_of_bean_origin) %>%
   dplyr::filter(n() >=10)%>%
@@ -139,6 +155,10 @@ high3_10 <- chocolate %>% group_by(country_of_bean_origin) %>%
 
 print(high3_10)
 ```
+
+       
+    
+    
 
 7. For this last part, let’s explore the relationship between percent chocolate and ratings.
 
@@ -156,24 +176,41 @@ Use the functions in dplyr, tidyr, and lubridate to perform the following steps 
 
 On average, which category of chocolate percentage is most highly rated? Do these countries mostly agree or are there disagreements?
 
+
+      Answer: In the overall boxplot, the second cocoa percentage group, of which the range between 60% to 70%, and the third cocoa percentage group, of which the range between 70% to 90%, have the highest median of rating scores. And most of the countries agree with the overall patterns. 
+      
+
+
 ```{r}
 library(dplyr)
 library(tidyr)
 library(lubridate)
+library(ggplot2)
 
 #a. identify countries have more than 50 reviews.
 country50 <- chocolate %>%
   dplyr::group_by(country_of_bean_origin) %>%
-  dplyr::filter(n() >= 50)
+  dplyr::mutate(review_n = n()
+  )%>%
+  dplyr::filter(review_n >= 50)
+  
 #b. create new variable- 4 groups: (i) <60%, (ii) >=60 to <70%, (iii) >=70 to <90%, and (iii) >=90%  
 country50$cocoa_num <- as.numeric(substr(country50$cocoa_percent, 1, nchar(country50$cocoa_percent)-1))
 
 country50 <- country50 %>% dplyr::mutate(percgroup = case_when(
-        cocoa_num < 60~ 1,
+        cocoa_num < 60 ~ 1,
         cocoa_num >= 60 & cocoa_num <70 ~ 2,
         cocoa_num >= 70 & cocoa_num <90 ~ 3,
         cocoa_num >=90 ~ 4
     ))
+
+
+
+ggplot(country50 , aes(x = as.factor (percgroup), y = rating)) +
+  geom_boxplot() +
+  labs(x = "Cocoa Percentage Group",
+       y = "Rating",      
+       title = "Ratings by Cocoa Percentage Group, overall") 
 
  ggplot(country50 , aes(x = as.factor (percgroup), y = rating)) +
   geom_boxplot() +
@@ -184,8 +221,7 @@ country50 <- country50 %>% dplyr::mutate(percgroup = case_when(
 
 ```
 
-
-
+     
 
 ## Part 2: Joint dataset together
 
@@ -207,15 +243,26 @@ Tasks
 
 ```{r}
 library(gapminder)
-view(gapminder)
+#view(gapminder)
 gapminder1 <- gapminder %>% 
   dplyr::group_by(country)%>% 
   distinct(country, continent) 
 
+
+
 newchocol <- chocolate %>% 
   left_join(gapminder1, by = c("country_of_bean_origin" = "country")) %>%
   dplyr::group_by(country_of_bean_origin) %>%
+  dplyr::mutate(
+    continent = case_when(
+      country_of_bean_origin == "Fiji"| country_of_bean_origin == "Papua New Guinea"| country_of_bean_origin== "Vanuatu"|country_of_bean_origin == "Solomon Islands" ~ "Oceania",
+      country_of_bean_origin == "Sao Tome"| country_of_bean_origin == "Congo" ~ "Africa",
+      is.na(continent) ~ "Americas",
+      TRUE ~ continent
+    )
+  )%>%
   dplyr::filter(n() >= 10 &country_of_bean_origin != "Blend")
+
 
 unmatch <- newchocol%>%
  dplyr:: filter(is.na(continent))%>%
@@ -233,6 +280,7 @@ ggplot(newchocol, aes(x = continent, y = rating)) +
 
 
 ```
+
 
 
 
@@ -312,7 +360,7 @@ print(summary_long)
 ggplot(summary_long, aes(x = review_date, y = mean_score)) +
   geom_point(color = "blue") +                             # Observed points
   geom_smooth(method = "loess", se = FALSE, color = "red") + # Smoothed non-linear trend line
-  facet_wrap(~ feature_char, scales = "free_y") +               # One plot for each feature
+    facet_wrap(~ feature_char, scales = "free_y") +               # One plot for each feature
   labs(
     title = "Mean Scores for Chocolate Features",            # Overall title
     x = "Year",                                             
@@ -325,9 +373,76 @@ ggplot(summary_long, aes(x = review_date, y = mean_score)) +
 
 ## PART 5
 
+Tasks
+
+
+  Using the chocolate dataset (or any of the modified versions you made throughout this assignment or anything else you wish you build upon it):
+
+  
+  1. Make the absolute worst plot that you can. You need to customize it in at least 7 ways to make it awful.
+ 
+ 
+  2. In your document, write 1 - 2 sentences about each different customization you added (using bullets – i.e. there should be at least 7 bullet points each with 1-2 sentences), and how it could be useful for you when you want to make an awesome data visualization.
+  
+  
+    Solution: In this graph, there are several cunstomizations I created:
+    
+    1. geom_violin and geom_jitter: the worst graph was overplotted. To make the plot clearer and better, I can only keep one plot. 
+    
+    
+    2. the fill color of geom_violin: the color I selected in this worst graph was not beautiful. I can change another set of platter to make the graph more beautiful.
+    
+    
+    3. geom_violin: this is to plot a violin graph and customize the graph in different preference.  
+    
+    
+    4. the label: in this worst graph, I did not make a clear legend label. To edit, I can change the "No legend" to other variabl.
+   
+   
+    5. the background color, and text color: in this worst graph, it was hard to read my text because of the strange set of color I select for background and text. To make the graph better, I can use different pair of color like: plot.background = element_rect(fill = "white", color="white") and axis.text.x = element_text(color = "black")
+  
+  
+    6. The x-axis: in the worst graph, I rotated the x-axis and use the wrong size of text. 
+   
+   
+    7. the legend: in the worst graph, the size of text was too large. T
+
 
 ```{r}
+newchocol$cocoa_num <- as.numeric(substr(newchocol$cocoa_percent, 1, nchar(newchocol$cocoa_percent)-1))
+newchocol <- newchocol %>% 
+  dplyr::mutate(percgroup = case_when(
+        cocoa_num < 60 ~ 1,
+        cocoa_num >= 60 & cocoa_num <70 ~ 2,
+        cocoa_num >= 70 & cocoa_num <90 ~ 3,
+        cocoa_num >=90 ~ 4
+    ))
 
+
+newchocol %>% 
+  ggplot(aes(
+        x = continent,
+        y = rating,        
+        fill = continent
+
+    )) +
+    geom_violin()+
+  facet_wrap(~as.factor(percgroup))+
+  geom_jitter(width = 0.2, color = "green", height=0.2) +  
+  labs(
+    x = "X-axis: continents",
+    y = "Y-axis: Rating",
+    fill = "No Legend"    
+  ) +
+  theme(
+    plot.background = element_rect(fill = "lightyellow"), #light color
+    axis.text.x = element_text(angle = 90, size = 36, color = "yellow"), # Hard to read, rotated x-axis text
+    axis.text.y = element_text(size = 5), 
+    legend.position = "bottom",                             # Clunky legend position
+    legend.text = element_text(size = 50)                   # Overly large legend text
+  )
+    
+    
 ```
 
 
@@ -337,15 +452,54 @@ ggplot(summary_long, aes(x = review_date, y = mean_score)) +
 
 
 ```{r}
-chocolate %>%
-    ggplot(aes(
-        x = as.factor(review_date),
-        y = rating,
-        fill = review_date
+newchocol %>% 
+  ggplot(aes(
+        x = continent,
+        y = rating,        
+        fill = as.factor(percgroup)  # Fill based on percgroup, treat as factor
     )) +
-    geom_violin()
+    geom_violin(trim = FALSE, alpha = 0.6, color = "black") +   # Use alpha and black outline
+    scale_fill_brewer(palette = "Set3") +                       # Use a color palette for better visuals
+    facet_wrap(~as.factor(percgroup))+
+    labs(
+      title = "Distribution of Ratings by Continent and Percentage Group",  # Clear and informative title
+      x = "Continents",                                                    # Improved x-axis label
+      y = "Rating",                                                        # Improved y-axis label
+      fill = "Percentage of Cocoa Category"                                           # Clarified legend lab
+    ) +
+    theme_minimal() +                                                      # Clean theme
+    theme(
+      plot.background = element_rect(fill = "white", color="white", linewidth = 1),
+      axis.text.x = element_text(size = 12, color = "black"), 
+      axis.text.y = element_text(size = 12), 
+      legend.position = "bottom",                             
+      legend.text = element_text(size = 12),
+      plot.title = element_text(size = 16, face = "bold", hjust = 0.5)  # Centered and bold title
+    )
 ```
 
+
+    Solution:   In this graph, there are several cunstomizations I edited to make the graph clear:
+    
+    1. geom_violin and geom_jitter: I only keep "geom_violin"
+    
+    
+    2. the fill color of geom_violin: I change another set of platter by using scale_fill_brewer(palette = "Set3"). 
+    
+    
+    3. geom_violin: I added alpha = 0.6 and color = "black" to make the violin graph slightly transparent and add the black outline. 
+    
+    
+    4. the label: I changed the "No legend" to other variable, like the categories of percentage of cocoa. 
+   
+   
+    5. the background color, and text color: I used a different pair of colors like: plot.background = element_rect(fill = "white", color="white") and axis.text.x = element_text(color = "black") which made the text more clear.
+  
+  
+    6. The x-axis: I deleted the angle=90, and changed from size 36 to size 12.
+   
+   
+    7. the legend: I changed the text size from 36 to 16. 
 
 
 
